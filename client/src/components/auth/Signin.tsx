@@ -1,13 +1,16 @@
 // components/auth/signup-form.tsx
 'use client';
 
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { Mail, Lock } from 'lucide-react';
 import { InputField } from '@/components/ui/auth/InputField';
 import { SocialButton } from '@/components/ui/auth/SocialButton';
 import { Divider } from '@/components/ui/auth/Divider';
 import { ContentSection } from '@/components/ui/auth/ContentSection';
 import { useState, FormEvent } from 'react';
+import { auth } from '@/lib/firebase';
+import { useAppDispatch, useAppSelector } from "@/redux/store";
+import { setUser } from "@/redux/slices/AuthSlice";
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -36,7 +39,8 @@ export const SigninForm = () => {
     password: '',
   });
 
-  const auth = getAuth();
+  const dispatch = useAppDispatch();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
@@ -45,7 +49,12 @@ export const SigninForm = () => {
   .then((userCredential) => {
 
     const user = userCredential.user;
-    // ...
+
+    dispatch(setUser({
+      uid: user.uid,
+      email: user.email ?? undefined,
+    }));
+
   })
   .catch((error) => {
     const errorCode = error.code;

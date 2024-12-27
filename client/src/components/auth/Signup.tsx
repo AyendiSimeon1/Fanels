@@ -9,6 +9,10 @@ import { SocialButton } from '@/components/ui/auth/SocialButton';
 import { Divider } from '@/components/ui/auth/Divider';
 import { ContentSection } from '@/components/ui/auth/ContentSection';
 import { useState, FormEvent } from 'react';
+import { useAppDispatch, useAppSelector } from '@/redux/store';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { setUser } from '@/redux/slices/AuthSlice';
+import { ClipLoader } from 'react-spinners'; // Add this import
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -37,16 +41,33 @@ export const SignUpForm = () => {
     password: '',
   });
 
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Add loading state
+
+  const dispatch = useAppDispatch();
+
+  useAuthRedirect();
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     console.log(formData);
 
     try {
+      setLoading(true); // Set loading to true when form is submitted
       const userCredentials = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredentials.user;
+
+      const userToDispatch = {
+        uid: user.uid,
+        email: user.email || undefined,
+      };
+      dispatch(setUser(userToDispatch));
       console.log('User created:', user);
     } catch (error:any) {
       console.error('Error creating user:', error.code, error.message);
+      setError(error.message);
+    } finally {
+      setLoading(false); // Set loading to false after the process is complete
     }
   };
 
@@ -87,8 +108,9 @@ export const SignUpForm = () => {
             <button 
               type="submit"
               className="w-full bg-[#27AE60] text-white py-3 rounded-lg hover:bg-[#219652] transition-colors duration-200"
+              disabled={loading} // Disable button when loading
             >
-              Create account
+              {loading ? <ClipLoader size={24} color="#fff" /> : 'Create account'} // Show spinner when loading
             </button>
           </form>
 

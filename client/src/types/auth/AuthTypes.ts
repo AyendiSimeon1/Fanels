@@ -1,8 +1,7 @@
 
 export interface User {
-    id: string;
-    email: string;
-    password: string;
+    uid?: string;
+    email?: string;
 }
 
 export interface AuthState {

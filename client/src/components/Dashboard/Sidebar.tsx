@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuthRedirect } from '../../hooks/useAuthRedirect'
 
 interface NavItem {
   title: string
@@ -31,6 +32,7 @@ const bottomNavItems: NavItem[] = [
 ]
 
 export function DashboardSidebar() {
+  useAuthRedirect()
   const pathname = usePathname()
 
   const NavLink = ({ item }: { item: NavItem }) => {
