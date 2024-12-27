@@ -1,5 +1,5 @@
-import { DashboardNav } from '@/components/dashboard/nav'
-import { DashboardSidebar } from '@/components/dashboard/sidebar'
+import { DashboardNav } from '@/components/Dashboard/Nav'
+import { DashboardSidebar } from '@/components/Dashboard/Sidebar'
 
 export default function DashboardLayout({
   children,

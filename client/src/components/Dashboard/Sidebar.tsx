@@ -6,7 +6,7 @@ import {
   History, 
   Settings, 
   HelpCircle,
-  FilePresentation,
+  File,
   PlusCircle
 } from 'lucide-react'
 import Link from 'next/link'
@@ -20,7 +20,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: 'Overview', href: '/dashboard', icon: Home },
-  { title: 'Templates', href: '/dashboard/templates', icon: FilePresentation },
+  { title: 'Templates', href: '/dashboard/templates', icon: File },
   { title: 'My Presentations', href: '/dashboard/presentations', icon: FolderOpen },
   { title: 'History', href: '/dashboard/history', icon: History },
 ]
@@ -54,7 +54,7 @@ export function DashboardSidebar() {
     <div className="w-64 border-r bg-white dark:bg-gray-900">
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <FilePresentation className="h-6 w-6 text-[#27AE60]" />
+          <File className="h-6 w-6 text-[#27AE60]" />
           <span>AI Slides</span>
         </Link>
       </div>

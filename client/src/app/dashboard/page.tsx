@@ -1,9 +1,11 @@
 import React from 'react';
-
+import DashboardLayout from '@/components/Dashboard/layout'
+import { DashboardView } from '@/components/Dashboard/DashboardTypes';
+import { DashboardNav } from '@/components/Dashboard/Nav';
 const DashboardPage: React.FC = () => {
     return (
         <div>
-            <h1>Dashboard</h1>
+            <DashboardLayout children={<DashboardView />} />
         </div>
     );
 };

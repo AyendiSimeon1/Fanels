@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { usePresentation, Template } from '@/hooks/use-presentation'
-import { Wand2, FilePresentation, Clock, AlertCircle } from 'lucide-react'
+// import { Card } from '@/components/ui/card'
+import { usePresentation, Template } from '@/hooks/usePresentation'
+import { Wand2, File, Clock, AlertCircle } from 'lucide-react'
 
 export function DashboardView() {
   const {
@@ -53,7 +53,7 @@ export function DashboardView() {
       {/* Template Selection */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {templates.map((template) => (
-          <Card 
+          <div 
             key={template.id}
             className={`cursor-pointer transition-all hover:shadow-lg ${
               selectedTemplate?.id === template.id ? 'ring-2 ring-[#27AE60]' : ''
@@ -74,12 +74,12 @@ export function DashboardView() {
                 </span>
               </div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
 
       {/* Prompt Input */}
-      <Card className="p-6">
+      <div className="p-6">
         <h3 className="text-lg font-semibold mb-4">Presentation Prompt</h3>
         <textarea
           className="w-full h-32 p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#27AE60]"
@@ -104,10 +104,10 @@ export function DashboardView() {
             </div>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Recent Generations */}
-      <Card className="p-6">
+      <div className="p-6">
         <h3 className="text-lg font-semibold mb-4">Recent Presentations</h3>
         <div className="space-y-4">
           {recentPresentations.map((presentation) => (
@@ -116,7 +116,7 @@ export function DashboardView() {
               className="flex items-center justify-between p-4 border rounded-lg"
             >
               <div className="flex items-center gap-4">
-                <FilePresentation className="h-6 w-6 text-[#27AE60]" />
+                <File className="h-6 w-6 text-[#27AE60]" />
                 <div>
                   <h4 className="font-medium">{presentation.name}</h4>
                   <p className="text-sm text-gray-500">
@@ -136,7 +136,7 @@ export function DashboardView() {
             </div>
           ))}
         </div>
-      </Card>
+      </div>
     </div>
   )
 }
