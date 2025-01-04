@@ -1,8 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
-import { useEffect, useState } from 'react';
-import { useAppDispatch } from '@/redux/store';
+import { use, useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '@/redux/store';
 import { setUser } from '@/redux/slices/AuthSlice';
+
 export const firebaseConfig = {
   apiKey: "AIzaSyC9OyV3ZCNEEbyqSq6BhvBeetEWIDc_ViY",
   authDomain: "fanels-9fbf7.firebaseapp.com",
@@ -23,11 +24,12 @@ provider.setCustomParameters({
 });
 
 export const useAuth = () => {
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const dispatch = useAppDispatch();
+  const state = useAppSelector((state) => state.auth);
+  console.log('State:', state);
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setUser(user);
@@ -42,9 +44,10 @@ export const useAuth = () => {
       setError(null);
       const result = await signInWithPopup(auth, provider);
       console.log('The result:', result);
+      dispatch(setUser({ uid: result.user.uid || undefined, email: result.user.email || undefined }));
       return result.user;
 
-    } catch (error) {
+    } catch (error: any) {
       console.log('Error:', error);
       setError(error.message);
       throw error;
@@ -60,5 +63,5 @@ export const useAuth = () => {
     }
   };
 
-  return { user, loading, error, signInWithGoogle, logout };
+  return {  loading, error, signInWithGoogle, logout };
 };

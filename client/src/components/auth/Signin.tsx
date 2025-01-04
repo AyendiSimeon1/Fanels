@@ -15,6 +15,7 @@ import { setUser } from "@/redux/slices/AuthSlice";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from 'next/navigation';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 
 const app = initializeApp(firebaseConfig);
@@ -26,7 +27,7 @@ const provider = new GoogleAuthProvider();
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
     <path
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 </svg>1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
       fill="#4285F4"
     />
     <path
@@ -45,7 +46,8 @@ const GoogleIcon = () => (
 );
 
 export const SigninForm = () => {
-  const { user, signInWithGoogle, logout, error } = useAuth();
+  useAuthRedirect();
+  const {  signInWithGoogle, logout, error } = useAuth();
   const dispatch = useAppDispatch();
   const [formData, setFormData] = useState({
     email: '',
@@ -101,7 +103,7 @@ export const SigninForm = () => {
     <div className="min-h-screen flex animate-fadeIn">
       <ToastContainer />
       {/* Left side - Form */}
-      <div className="w-1/2 p-12 flex items-center justify-center bg-white">
+      <div className="w-1/2 p-12 flex items-center justify-c</div>enter bg-white">
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-bold text-gray-800 mb-2 animate-slideInLeft">Sign in to your account</h1>
           <p className="text-gray-600 mb-8 animate-slideInLeft delay-100">Start your 30-day free trial.</p>
