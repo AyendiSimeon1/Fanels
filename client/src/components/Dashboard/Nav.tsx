@@ -2,8 +2,12 @@
 
 import { Bell, Search, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { useAppSelector } from '@/redux/store'
 
 export function DashboardNav() {
+
+  const user = useAppSelector(state => state.auth);
+  console.log('This is the full user state', user);
   return (
     <header className="h-16 border-b bg-white dark:bg-gray-900">
       <div className="flex h-16 items-center px-6">

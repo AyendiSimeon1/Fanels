@@ -1,16 +1,27 @@
-// components/auth/signup-form.tsx
+
 'use client';
 
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { initializeApp } from 'firebase/app';
+import { getAuth, getRedirectResult, signInWithPopup, signOut, GoogleAuthProvider } from "firebase/auth";
+import { firebaseConfig, useAuth } from '@/lib/firebase';
 import { Mail, Lock } from 'lucide-react';
 import { InputField } from '@/components/ui/auth/InputField';
 import { SocialButton } from '@/components/ui/auth/SocialButton';
 import { Divider } from '@/components/ui/auth/Divider';
 import { ContentSection } from '@/components/ui/auth/ContentSection';
 import { useState, FormEvent } from 'react';
-import { auth } from '@/lib/firebase';
 import { useAppDispatch, useAppSelector } from "@/redux/store";
 import { setUser } from "@/redux/slices/AuthSlice";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useRouter } from 'next/navigation';
+
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -34,47 +45,68 @@ const GoogleIcon = () => (
 );
 
 export const SigninForm = () => {
+  const { user, signInWithGoogle, logout, error } = useAuth();
+  const dispatch = useAppDispatch();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
 
-  const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState(false);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
+  const router = useRouter();
 
-  signInWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Sign in error:', error);
+    }
+  };
 
-    const user = userCredential.user;
+  const handleSignOut = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
-    dispatch(setUser({
-      uid: user.uid,
-      email: user.email ?? undefined,
-    }));
-
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-  });
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    console.log(formData);
+    setLoading(true);
+     signInWithGoogle()
+      .then((userCredential) => {
+        const user = userCredential.user;
+        console.log('The credentials:', userCredential);
+        dispatch(setUser({
+          uid: user.uid,
+          email: user.email ?? undefined,
+        }));
+        toast.success('Signed in successfully!');
+        setLoading(false);
+        router.push('/dashboard');
+      })
+      .catch((error) => {
+        toast.error(`Error: ${error.message}`);
+        setLoading(false);
+      });
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex animate-fadeIn">
+      <ToastContainer />
       {/* Left side - Form */}
       <div className="w-1/2 p-12 flex items-center justify-center bg-white">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Sign in to your account</h1>
-          <p className="text-gray-600 mb-8">Start your 30-day free trial.</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2 animate-slideInLeft">Sign in to your account</h1>
+          <p className="text-gray-600 mb-8 animate-slideInLeft delay-100">Start your 30-day free trial.</p>
 
-          <SocialButton icon={<GoogleIcon />}>
+          <SocialButton icon={<GoogleIcon />} onClick={handleSignIn}>
             Sign in with Google
           </SocialButton>
 
@@ -103,13 +135,14 @@ export const SigninForm = () => {
 
             <button 
               type="submit"
-              className="w-full bg-[#27AE60] text-white py-3 rounded-lg hover:bg-[#219652] transition-colors duration-200"
+              className={`w-full bg-[#27AE60] text-white py-3 rounded-lg hover:bg-[#219652] transition-colors duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading}
             >
-              Create account
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-gray-600 animate-slideInLeft delay-200">
             Dont have an account?{' '}
             <a href="#" className="text-[#27AE60] hover:text-[#219652] font-medium">
               Sign in
@@ -117,15 +150,16 @@ export const SigninForm = () => {
           </p>
         </div>
       </div>
-
-      {/* Right side - Content */}
+    
       <div className="w-1/2 bg-[#27AE60] flex items-center justify-center p-12">
         <ContentSection
           title="Powered by advanced algorithms for accuracy and creativity."
           description="Say goodbye to the hassle of creating slides from scratch! Fanels is your smart AI agent designed to transform your ideas into professional, visually stunning presentations in minutes."
           userCount={10000}
+          className="animate-slideInRight"
         />
       </div>
     </div>
   );
 };
+

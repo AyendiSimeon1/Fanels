@@ -12,7 +12,9 @@ import { useState, FormEvent } from 'react';
 import { useAppDispatch, useAppSelector } from '@/redux/store';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { setUser } from '@/redux/slices/AuthSlice';
-import { ClipLoader } from 'react-spinners'; // Add this import
+import { ClipLoader } from 'react-spinners';
+import { toast, ToastContainer } from 'react-toastify'; 
+import 'react-toastify/dist/ReactToastify.css'; 
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -42,7 +44,7 @@ export const SignUpForm = () => {
   });
 
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
 
   const dispatch = useAppDispatch();
 
@@ -53,7 +55,7 @@ export const SignUpForm = () => {
     console.log(formData);
 
     try {
-      setLoading(true); // Set loading to true when form is submitted
+      setLoading(true);
       const userCredentials = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredentials.user;
 
@@ -63,16 +65,19 @@ export const SignUpForm = () => {
       };
       dispatch(setUser(userToDispatch));
       console.log('User created:', user);
+      toast.success('Account created successfully!'); 
     } catch (error:any) {
       console.error('Error creating user:', error.code, error.message);
       setError(error.message);
+      toast.error(`Error: ${error.message}`);
     } finally {
-      setLoading(false); // Set loading to false after the process is complete
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex">
+      <ToastContainer /> 
       <div className="w-1/2 p-12 flex items-center justify-center bg-white">
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Create account</h1>
@@ -108,9 +113,9 @@ export const SignUpForm = () => {
             <button 
               type="submit"
               className="w-full bg-[#27AE60] text-white py-3 rounded-lg hover:bg-[#219652] transition-colors duration-200"
-              disabled={loading} // Disable button when loading
+              disabled={loading}
             >
-              {loading ? <ClipLoader size={24} color="#fff" /> : 'Create account'} // Show spinner when loading
+              {loading ? <ClipLoader size={24} color="#fff" /> : 'Create account'}
             </button>
           </form>
 

@@ -9,7 +9,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "express": "^4.21.2"
-  }
+  "workspaces": ["client", "server"]
 }
