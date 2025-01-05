@@ -1,53 +1,79 @@
-import { Document } from 'langchain/document';
-import { FaissStore } from 'langchain/vectorstores/faiss';
-import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
-import { config } from 'dotenv';
+import { PineconeClient } from '@pinecone-database/pinecone';
+import { EmbeddingsService } from './embeddings';
+import { config } from '../config/app';
 import { SearchResult } from '../types';
 
-
 export class VectorStoreService {
-    private vectorStore: FaissStore | null = null;
-    private embeddings: OpenAIEmbeddings;
+    private pineconeClient: PineconeClient | null = null;
+    private embeddings: EmbeddingsService;
 
-    constructor () {
-        this.embeddings = new OpenAIEmbeddings({
-            modelKey: config.modelKey,
-        });
+    constructor() {
+        this.embeddings = new EmbeddingsService();
     }
 
-    async initialize () {
+    async initialize() {
         try {
-            this.vectorStroe = await FaissStore.load(
-                config.vectorStore.path,
-                this.embeddings
-            );
+            this.pineconeClient = new PineconeClient();
+            await this.pineconeClient.init({
+                apiKey: config.pinecone.apiKey, // Your Pinecone API key
+            });
+
+            // Assuming your index is already created, or you can create a new one
+            this.pineconeClient.index(config.pinecone.indexName);
         } catch (error) {
-            this.vectorStroe = await FaissStore.fromDocuments(
-                [],
-                this.embeddings
-            );
+            console.error('Error initializing Pinecone client:', error);
+            throw new Error('Failed to initialize Pinecone client');
         }
     }
 
-    async addDocument(documents: Document[]) {
-        if (!this.vectorStroe) {
-            throw new Error('Vector store not initialize');
+    async addDocument(documents: { content: string, metadata: object }[]) {
+        if (!this.pineconeClient) {
+            throw new Error('Pinecone client not initialized');
         }
 
-        await this.vectorStore.addDocuments(documents);
-        await this.vectorStoroe.save(config.vectorStore.path);
+        try {
+            const vectors = await Promise.all(
+                documents.map(async (doc) => {
+                    const embedding = await this.embeddings.getEmbedding(doc.content);
+                    return {
+                        id: doc.metadata.id,
+                        values: embedding,
+                        metadata: doc.metadata
+                    };
+                })
+            );
+
+            await this.pineconeClient.index(config.pinecone.indexName).upsert({
+                vectors,
+            });
+            console.log('Documents added successfully');
+        } catch (error) {
+            console.error('Error adding documents to Pinecone:', error);
+            throw new Error('Failed to add documents');
+        }
     }
 
     async similaritySearch(query: string, k = 4): Promise<SearchResult[]> {
-        if (!this.vectorStore) {
-            throw new Error('Vectore store not initialized');
+        if (!this.pineconeClient) {
+            throw new Error('Pinecone client not initialized');
         }
 
-        const results = await this.vectorStore.similaritySearchWithScore(query, k);
-        return results.map(([doc, score]) => ({
-            content: doc.pageContent,
-            metadata: doc.metatdata,
-            score
-        }))
+        try {
+            const embedding = await this.embeddings.getEmbedding(query);
+            const results = await this.pineconeClient.index(config.pinecone.indexName).query({
+                queryVector: embedding,
+                topK: k,
+                includeMetadata: true,
+            });
+
+            return results.matches.map((match) => ({
+                content: match.metadata.content,
+                metadata: match.metadata,
+                score: match.score,
+            }));
+        } catch (error) {
+            console.error('Error performing similarity search:', error);
+            throw new Error('Failed to perform similarity search');
+        }
     }
 }
