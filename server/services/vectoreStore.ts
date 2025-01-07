@@ -1,95 +1,78 @@
 import { Pinecone } from '@pinecone-database/pinecone';
+import { Document } from '@langchain/core/documents';
 import { config } from '../config/app';
-import { SearchResult } from '../types';
 
 export class VectorStoreService {
     private pinecone: Pinecone;
     private index: any;
-    private readonly indexName: string;
-    private readonly namespace: string;
-    private readonly model = 'multilingual-e5-large';
+    private namespace: string;
+    private model: string;
 
     constructor() {
-        this.initialize().catch(error => {
-            console.error('Initialization failed:', error);
-        });
-        this.indexName = config.pinecone.indexName || 'default-index-name';
-        this.namespace = config.pinecone.namespace || 'example-namespace';
         this.pinecone = new Pinecone({
-            apiKey: config.pinecone.apiKey || 'sdfa'
+            apiKey: 'pcsk_ubWxM_GxMQPVemhB6wqJBxzo4myQz4WSjC9CvxiN6JkowokuuxrULAxC1HN2LQk7Fcimx'
         });
+        this.model = 'multilingual-e5-large';
+        this.namespace = 'default-namespace';
     }
 
     async initialize() {
         try {
-            // Get the index
-            this.index = this.pinecone.index(this.indexName);
+            // Initialize the index
+            this.index = this.pinecone.index('base');
             
-            // Optional: Create index if it doesn't exist
+            // Check if index exists, if not create it
             const indexList = await this.pinecone.listIndexes();
             if (!indexList) {
                 await this.pinecone.createIndex({
-                    name: this.indexName,
-                    dimension: 1024, // dimension for multilingual-e5-large
+                    name: 'base',
+                    dimension: 1024,
                     metric: 'cosine',
                     spec: {
                         serverless: {
                             cloud: 'aws',
-                            region: 'us-west-2'
+                            region: 'asia'
                         }
                     }
                 });
             }
         } catch (error) {
-            console.error('Error initializing Pinecone client:', error);
-            throw new Error('Failed to initialize Pinecone client');
+            console.error('Failed to initialize vector store:', error);
+            throw error;
         }
     }
 
-    async addDocuments(documents: { content: string; metadata: Record<string, any> }[]) {
-        if (!this.index) {
-            throw new Error('Pinecone index not initialized');
-        }
-
+    async addDocuments(documents: { id: string; content: string }[]): Promise<void> {
         try {
-            // Get embeddings for all documents
+            // Generate embeddings for all documents
             const embeddings = await this.pinecone.inference.embed(
                 this.model,
-                documents.map(d => d.content),
+                documents.map(doc => doc.content),
                 { inputType: 'passage', truncate: 'END' }
             );
 
             // Prepare records for upsert
             const records = documents.map((doc, i) => ({
-                id: doc.metadata.id || `doc-${i}`,
+                id: doc.id,
                 values: embeddings[i].values,
-                metadata: {
-                    ...doc.metadata,
-                    text: doc.content
-                }
+                metadata: { content: doc.content }
             }));
 
-            // Upsert in batches of 100
+            // Upsert in batches of 100 to avoid rate limits
             const batchSize = 100;
             for (let i = 0; i < records.length; i += batchSize) {
                 const batch = records.slice(i, i + batchSize);
                 await this.index.namespace(this.namespace).upsert(batch);
             }
-
-            console.log(`Successfully added ${records.length} documents to Pinecone`);
         } catch (error) {
-            console.error('Error adding documents to Pinecone:', error);
-            throw new Error('Failed to add documents');
+            console.error('Failed to add documents:', error);
+            throw error;
         }
     }
 
-    async similaritySearch(query: string, k = 4): Promise<SearchResult[]> {
-        if (!this.index) {
-            throw new Error('Pinecone index not initialized');
-        }
-
+    async similaritySearch(query: string, k: number = 3): Promise<Document[]> {
         try {
-            // Convert query to embedding using Pinecone's inference API
+            // Generate embedding for the query
             const queryEmbedding = await this.pinecone.inference.embed(
                 this.model,
                 [query],
@@ -97,21 +80,42 @@ export class VectorStoreService {
             );
 
             // Search the index
-            const queryResponse = await this.index.namespace(this.namespace).query({
+            const results = await this.index.namespace(this.namespace).query({
                 topK: k,
                 vector: queryEmbedding[0].values,
                 includeValues: false,
                 includeMetadata: true
             });
 
-            return queryResponse.matches.map((match: any) => ({
-                content: match.metadata.text,
-                metadata: { ...match.metadata, text: undefined },
-                score: match.score
+            // Convert to Document format expected by LangChain
+            return results.matches.map((match: { metadata: { content: any; }; score: any; id: any; }) => new Document({
+                pageContent: match.metadata.content,
+                metadata: {
+                    score: match.score,
+                    id: match.id
+                }
             }));
         } catch (error) {
-            console.error('Error performing similarity search:', error);
-            throw new Error('Failed to perform similarity search');
+            console.error('Failed to perform similarity search:', error);
+            throw error;
+        }
+    }
+
+    async deleteDocument(id: string): Promise<void> {
+        try {
+            await this.index.namespace(this.namespace).deleteOne(id);
+        } catch (error) {
+            console.error('Failed to delete document:', error);
+            throw error;
+        }
+    }
+
+    async deleteAll(): Promise<void> {
+        try {
+            await this.index.namespace(this.namespace).deleteAll();
+        } catch (error) {
+            console.error('Failed to delete all documents:', error);
+            throw error;
         }
     }
 }
