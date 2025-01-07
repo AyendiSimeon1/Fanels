@@ -1,32 +1,28 @@
 import { Pinecone } from '@pinecone-database/pinecone';
-import { EmbeddingsService } from './embeddings';
 import { config } from '../config/app';
 import { SearchResult } from '../types';
 
 export class VectorStoreService {
-    private pinecone!: Pinecone;
-    private index: any; // Replace 'any' with proper Pinecone index type when available
-    private embeddings: EmbeddingsService;
+    private pinecone: Pinecone;
+    private index: any;
     private readonly indexName: string;
     private readonly namespace: string;
+    private readonly model = 'multilingual-e5-large';
 
     constructor() {
         this.initialize().catch(error => {
             console.error('Initialization failed:', error);
         });
-        this.embeddings = new EmbeddingsService();
-        this.indexName = config.pinecone.indexName!;
-        this.namespace = config.pinecone.namespace ?? '';
+        this.indexName = config.pinecone.indexName || 'default-index-name';
+        this.namespace = config.pinecone.namespace || 'example-namespace';
+        this.pinecone = new Pinecone({
+            apiKey: config.pinecone.apiKey || 'sdfa'
+        });
     }
 
     async initialize() {
         try {
-            // Initialize Pinecone client
-            this.pinecone = new Pinecone({
-                apiKey: config.pinecone.apiKey!,
-            });
-
-            // Wait for index to be ready
+            // Get the index
             this.index = this.pinecone.index(this.indexName);
             
             // Optional: Create index if it doesn't exist
@@ -34,12 +30,12 @@ export class VectorStoreService {
             if (!indexList) {
                 await this.pinecone.createIndex({
                     name: this.indexName,
-                    dimension: config.pinecone.dimension!, // Add this to your config (e.g., 1536 for OpenAI embeddings)
+                    dimension: 1024, // dimension for multilingual-e5-large
                     metric: 'cosine',
                     spec: {
                         serverless: {
-                            cloud:  'aws',
-                            region: config.pinecone.region ?? 'us-west-2'
+                            cloud: 'aws',
+                            region: 'us-west-2'
                         }
                     }
                 });
@@ -56,35 +52,31 @@ export class VectorStoreService {
         }
 
         try {
-            const vectors = await Promise.all(
-                documents.map(async (doc, index) => {
-                    const embedding = await this.embeddings.getEmbedding(doc.content!);
-                    return {
-                        id: doc.metadata.id || `doc-${index}`,
-                        values: embedding,
-                        metadata: {
-                            ...doc.metadata,
-                            content: doc.content // Store content in metadata for retrieval
-                        }
-                    };
-                })
+            // Get embeddings for all documents
+            const embeddings = await this.pinecone.inference.embed(
+                this.model,
+                documents.map(d => d.content),
+                { inputType: 'passage', truncate: 'END' }
             );
 
-            // Batch upserts in chunks of 100 to avoid rate limits
+            // Prepare records for upsert
+            const records = documents.map((doc, i) => ({
+                id: doc.metadata.id || `doc-${i}`,
+                values: embeddings[i].values,
+                metadata: {
+                    ...doc.metadata,
+                    text: doc.content
+                }
+            }));
+
+            // Upsert in batches of 100
             const batchSize = 100;
-            for (let i = 0; i < vectors.length; i += batchSize) {
-                const batch = vectors.slice(i, i + batchSize);
-                await this.index.upsert(
-                    this.namespace ? {
-                        namespace: this.namespace,
-                        vectors: batch
-                    } : {
-                        vectors: batch
-                    }
-                );
+            for (let i = 0; i < records.length; i += batchSize) {
+                const batch = records.slice(i, i + batchSize);
+                await this.index.namespace(this.namespace).upsert(batch);
             }
 
-            console.log(`Successfully added ${vectors.length} documents to Pinecone`);
+            console.log(`Successfully added ${records.length} documents to Pinecone`);
         } catch (error) {
             console.error('Error adding documents to Pinecone:', error);
             throw new Error('Failed to add documents');
@@ -97,19 +89,24 @@ export class VectorStoreService {
         }
 
         try {
-            const queryEmbedding = await this.embeddings.getEmbedding(query!);
-            
-            const queryResponse = await this.index.query({
-                namespace: this.namespace,
-                vector: queryEmbedding,
+            // Convert query to embedding using Pinecone's inference API
+            const queryEmbedding = await this.pinecone.inference.embed(
+                this.model,
+                [query],
+                { inputType: 'query' }
+            );
+
+            // Search the index
+            const queryResponse = await this.index.namespace(this.namespace).query({
                 topK: k,
+                vector: queryEmbedding[0].values,
                 includeValues: false,
                 includeMetadata: true
             });
 
             return queryResponse.matches.map((match: any) => ({
-                content: match.metadata.content,
-                metadata: { ...match.metadata, content: undefined }, // Remove content from metadata
+                content: match.metadata.text,
+                metadata: { ...match.metadata, text: undefined },
                 score: match.score
             }));
         } catch (error) {
