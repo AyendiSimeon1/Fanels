@@ -2,17 +2,24 @@
   "name": "server",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "commonjs",
   "private": "true",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.ts"
+    "dev": "ts-node server.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@huggingface/inference": "2",
+    "@langchain/community": "^0.3.22",
+    "@langchain/core": "^0.3.27",
+    "@langchain/google-genai": "^0.1.6",
+    "@langchain/google-vertexai": "^0.1.6",
     "@langchain/openai": "^0.3.16",
     "@pinecone-database/pinecone": "^4.0.0",
+    "@types/firebase": "^3.2.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -22,6 +29,10 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
   "description": ""
 }

@@ -1,29 +1,22 @@
-import { ChatOpenAI } from 'langchain/chat_models/openai';
 import {
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
     ChatPromptTemplate,
-} from 'langchain/prompts';
-
-import { LLMChain } from 'langchain/chains';
-impot { config } from '../config';
-
+} from "@langchain/core/prompts";
+import { ChatVertexAI } from "@langchain/google-vertexai";
 
 export class LLMService {
-    private model: ChatOpenAI;
+    private model: ChatVertexAI;
 
     constructor() {
-        this.model = new ChatOpenAI({
-            modelKey: config.modelKey,
-            modelName: 'gpt-4-turbo-preview',
-            temperature: 0.7
+        this.model = new ChatVertexAI({
+            model: "gemini-2.0-flash-exp",
+            temperature: 0.7,
+            maxRetries: 2,
         });
     }
 
-    async generateResponse(
-        prompt: string,
-        context: string[]
-    ): Promise<string> {
+    async generateResponse(prompt: string, context: string[]): Promise<string> {
         const chatPrompt = ChatPromptTemplate.fromMessages([
             SystemMessagePromptTemplate.fromTemplate(
                 'You are a helpful AI assistant. Use the following context'
@@ -31,16 +24,15 @@ export class LLMService {
             HumanMessagePromptTemplate.fromTemplate('{question}')
         ]);
 
-        const chain = new LLMChain({
-            prompt: chatPrompt,
-            llm: this.model,
-        });
-
-        const result = await chain.call({
-            context: context.join('\n'),
-            question: prompt,
-        });
-
-        return result.text;
+        const chain = chatPrompt.pipe(this.model);
+        const result = await chain.invoke({ question: prompt });
+        if (typeof result.content === 'string') {
+            return result.content;
+        }
+        const content = result.content[0];
+        if ('text' in content) {
+            return content.text;
+        }
+        throw new Error('Unexpected message content type');
     }
 }

@@ -1,19 +1,25 @@
-import { HuggingFaceTransformersEmbeddings } from 'langchain';
+import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
+
 import { config } from '../config/app';
-import { PineconeClient } from 'pinecone-client'; // Assuming you have a Pinecone client
+import { Pinecone } from '@pinecone-database/pinecone';
+
+type Metadata = { size: number, tags?: string[] | null, index: string | null };
 
 export class EmbeddingsService {
-    private embeddings: HuggingFaceTransformersEmbeddings;
-    private pineconeClient: PineconeClient<any>;
+    private embeddings: HuggingFaceInferenceEmbeddings;
+    private pineconeClient: Pinecone;
 
     constructor () {
-        this.embeddings = new HuggingFaceTransformersEmbeddings({
-            modelName: config.models.embedding,
-        });
+        this.embeddings = new HuggingFaceInferenceEmbeddings({
+            apiKey: "YOUR-API-KEY", 
+          });
         if (!config.pinecone.apiKey) {
             throw new Error('Pinecone API key is not defined');
         }
-        this.pineconeClient = new PineconeClient({ apiKey: config.pinecone.apiKey }); // Initialize Pinecone client
+        this.pineconeClient = new Pinecone({
+            apiKey: config.pinecone.apiKey,
+        
+        });
     }
 
     async embedQuery(text: string) : Promise<number[]> {
@@ -21,16 +27,32 @@ export class EmbeddingsService {
     }
 
     async embedDocuments(documents: string[]): Promise<number[][]> {
-        return this.embeddings.embedDocuments(documents); // Fixed recursive call
+        return this.embeddings.embedDocuments(documents); 
     }
 
     async queryPinecone(query: string, k: number) {
         const embedding = await this.embedQuery(query);
-        const results = await this.pineconeClient.index(config.pinecone.indexName).query({
-            queryVector: embedding,
+        if (!config.pinecone.indexName) {
+            throw new Error('Pinecone index name is not defined');
+        }
+        const index = this.pineconeClient.Index(config.pinecone.indexName);
+        const results = await index.query({
+            vector: embedding,
             topK: k,
             includeMetadata: true,
         });
         return results;
+    }
+    async getEmbedding(content: string): Promise<number[]> {
+
+        // Implement the logic to get embeddings for the content
+
+        // This is a placeholder implementation
+
+        return new Promise((resolve) => {
+
+            resolve([0.1, 0.2, 0.3]); // Replace with actual embedding logic
+
+        });
     }
 }

@@ -10,7 +10,7 @@ export class ChatController {
 
     constructor() {
         this.vectoreStore = new VectorStoreService();
-        this.agentService = new LLMService(this.vectoreStore);
+        this.agentService = new AgentService(this.vectoreStore);
         this.llmService = new LLMService();
     }
 
@@ -19,12 +19,12 @@ export class ChatController {
         await this.agentService.initialize();
     }
 
-    async handleChat(req:Request, res:Response) {
+    async handleChat(req:Request, res:Response): Promise<void> {
         try {
             const { prompt } = req.body;
 
             if (!prompt) {
-                return res.status(400).json({ error: ' Prompt is required' });
+                // return res.status(400).json({ error: ' Prompt is required' });
 
 
             }
